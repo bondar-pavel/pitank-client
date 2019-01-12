@@ -38,12 +38,12 @@ var commandToPin = map[string]int{
 }
 
 var CommandToGPIO = map[string]rpio.Pin{
-	"left_forward":   rpio.Pin(7),  // PIN: 26 GPIO: 7
-	"left_backward":  rpio.Pin(8),  // PIN: 24 GPIO: 8
-	"right_forward":  rpio.Pin(11), // PIN: 23 GPIO: 11
-	"right_backward": rpio.Pin(25), // PIN: 22 GPIO: 25
-	"tower_left":     rpio.Pin(9),  // PIN: 21 GPIO: 9
-	"tower_right":    rpio.Pin(10), // PIN: 19 GPIO: 10
+	"trackleft_forward":  rpio.Pin(7),  // PIN: 26 GPIO: 7
+	"trackleft_reverse":  rpio.Pin(8),  // PIN: 24 GPIO: 8
+	"trackright_forward": rpio.Pin(11), // PIN: 23 GPIO: 11
+	"trackright_reverse": rpio.Pin(25), // PIN: 22 GPIO: 25
+	"tower_left":         rpio.Pin(9),  // PIN: 21 GPIO: 9
+	"tower_right":        rpio.Pin(10), // PIN: 19 GPIO: 10
 }
 
 type Command struct {
@@ -64,13 +64,14 @@ func processCommand(c Command) {
 
 	cmds := strings.Split(c.Commands, ",")
 	for _, cmd := range cmds {
-		gpio, exist := CommandToGPIO[cmd]
+		_, exist := CommandToGPIO[cmd]
 		if !exist {
 			fmt.Println("Unknown command:", cmd)
-			resetPins()
+			//resetPins()
 			continue
 		}
-		gpio.High()
+		fmt.Println("Executing:", cmd)
+		//gpio.High()
 	}
 }
 
