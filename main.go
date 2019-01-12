@@ -30,6 +30,15 @@ var commandToPin = map[string]int{
 	"tower_right":    19,
 }
 
+var commandToGPIO = map[string]rpio.Pin{
+	"left_forward":   rpio.Pin(7),  // PIN: 26 GPIO: 7
+	"left_backward":  rpio.Pin(8),  // PIN: 24 GPIO: 8
+	"right_forward":  rpio.Pin(11), // PIN: 23 GPIO: 11
+	"right_backward": rpio.Pin(25), // PIN: 22 GPIO: 25
+	"tower_left":     rpio.Pin(9),  // PIN: 21 GPIO: 9
+	"tower_right":    rpio.Pin(10), // PIN: 19 GPIO: 10
+}
+
 func main() {
 	fmt.Println("Starting pitank client")
 
@@ -41,4 +50,10 @@ func main() {
 
 	// Unmap gpio memory when done
 	defer rpio.Close()
+
+	// Initialize GPIO pins as outputs with low state
+	for _, gpio := range commandToGPIO {
+		gpio.Output()
+		gpio.Low()
+	}
 }
