@@ -14,29 +14,6 @@ import (
 	rpio "github.com/stianeikeland/go-rpio"
 )
 
-// map PIN number on the board into GPIO number on bcm2835
-var pinToGPIO = map[int]int{
-	11: 17,
-	12: 18, // PIN 12: GPIO18
-	16: 23,
-	18: 24,
-	19: 10, // pins 19-26 are used for hardware v2
-	21: 9,
-	22: 25,
-	23: 11,
-	24: 8,
-	26: 7,
-}
-
-var commandToPin = map[string]int{
-	"left_forward":   26,
-	"left_backward":  24,
-	"right_forward":  23,
-	"right_backward": 22,
-	"tower_left":     21,
-	"tower_right":    19,
-}
-
 var CommandToGPIO = map[string]rpio.Pin{
 	"trackleft_forward":  rpio.Pin(7),  // PIN: 26 GPIO: 7
 	"trackleft_reverse":  rpio.Pin(8),  // PIN: 24 GPIO: 8
@@ -46,33 +23,106 @@ var CommandToGPIO = map[string]rpio.Pin{
 	"tower_right":        rpio.Pin(10), // PIN: 19 GPIO: 10
 }
 
+// DisallowedCombinations maps disallowed pairs
+// of simultanious commands to protect from short-circute
+// on some types of hardware
+var DisallowedCombinations = map[string]string{
+	"trackleft_forward":  "trackleft_reverse",
+	"trackleft_reverse":  "trackleft_forward",
+	"trackright_forward": "trackright_reverse",
+	"trackright_reverse": "trackright_forward",
+	"tower_left":         "tower_right",
+	"tower_right":        "tower_left",
+}
+
 type Command struct {
 	Commands string `json:"commands"`
 }
 
+// initializePins sets GPIO pins as outputs with low state
+func initializePins() {
+	for _, gpio := range CommandToGPIO {
+		gpio.Output()
+		gpio.Low()
+	}
+}
+
+// resetPins set all pins to low state
 func resetPins() {
 	for _, gpio := range CommandToGPIO {
 		gpio.Low()
 	}
 }
 
+// setPins sets pin state according to state map
+func setPins(stateMap map[string]bool) {
+	for cmd, state := range stateMap {
+		_, exist := CommandToGPIO[cmd]
+		if !exist {
+			fmt.Println("Command not found:", cmd)
+			continue
+		}
+
+		if state {
+			//gpio.High()
+		} else {
+			//gpio.Low()
+		}
+	}
+}
+
+// getStateMap receives list of valid commands and
+// produces map with allowed combination of hi/low pin states
+func getStateMap(commands []string) map[string]bool {
+	// initialize fresh state map
+	stateMap := make(map[string]bool)
+	for key := range CommandToGPIO {
+		stateMap[key] = false
+	}
+
+	for _, cmd := range commands {
+		// set command to stateMap and check for conflicting states
+		disallowed, exist := DisallowedCombinations[cmd]
+		if exist {
+			// if we tring to set disallowed state, cleanup both conflicting values
+			if stateMap[disallowed] {
+				fmt.Printf("%s and %s are conflicting commands, cleaning up both\n", cmd, disallowed)
+				stateMap[disallowed] = false
+				continue
+			}
+		}
+		// cmd is allowed, so set it to state map
+		stateMap[cmd] = true
+	}
+	return stateMap
+}
+
+// processCommand parses command content and set allowed combination of GPIO pins
 func processCommand(c Command) {
 	if c.Commands == "" {
 		fmt.Println("No command to run, skipping")
 		return
 	}
 
+	validCommands := make([]string, 0)
 	cmds := strings.Split(c.Commands, ",")
 	for _, cmd := range cmds {
 		_, exist := CommandToGPIO[cmd]
 		if !exist {
 			fmt.Println("Unknown command:", cmd)
-			//resetPins()
 			continue
 		}
-		fmt.Println("Executing:", cmd)
-		//gpio.High()
+		validCommands = append(validCommands, cmd)
 	}
+
+	if len(validCommands) == 0 {
+		//resetPins()
+		return
+	}
+
+	stateMap := getStateMap(validCommands)
+	// set stateMap as GPIO output state
+	setPins(stateMap)
 }
 
 func openWebsocket(host, name string) error {
@@ -110,8 +160,6 @@ func main() {
 	name := flag.String("name", "pitank", "pitank name to use on registration")
 	flag.Parse()
 
-	openWebsocket(*server, *name)
-
 	// Open and map memory to access gpio, check for errors
 	if err := rpio.Open(); err != nil {
 		fmt.Println(err)
@@ -121,9 +169,8 @@ func main() {
 	// Unmap gpio memory when done
 	defer rpio.Close()
 
-	// Initialize GPIO pins as outputs with low state
-	for _, gpio := range CommandToGPIO {
-		gpio.Output()
-		gpio.Low()
-	}
+	initializePins()
+
+	openWebsocket(*server, *name)
+
 }
