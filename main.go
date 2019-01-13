@@ -62,7 +62,11 @@ func setPins(stateMap map[string]bool) {
 	for cmd, state := range stateMap {
 		gpio, exist := CommandToGPIO[cmd]
 		if !exist {
-			fmt.Println("Command not found:", cmd)
+			if cmd == "stop" {
+				fmt.Println("Stopping...")
+			} else {
+				fmt.Println("Command not found:", cmd)
+			}
 			continue
 		}
 
@@ -130,7 +134,7 @@ func processCommand(c Command) {
 
 func openWebsocket(host, name string) error {
 	u := url.URL{Scheme: "ws", Host: host, Path: "/api/connect/" + name}
-	fmt.Printf("connecting to %s", u.String())
+	fmt.Printf("connecting to %s\n", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -175,5 +179,4 @@ func main() {
 	initializePins()
 
 	openWebsocket(*server, *name)
-
 }
