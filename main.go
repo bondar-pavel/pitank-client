@@ -56,17 +56,20 @@ func resetPins() {
 
 // setPins sets pin state according to state map
 func setPins(stateMap map[string]bool) {
+	b, err := json.Marshal(stateMap)
+	fmt.Println("Setting outputs:", string(b), err)
+
 	for cmd, state := range stateMap {
-		_, exist := CommandToGPIO[cmd]
+		gpio, exist := CommandToGPIO[cmd]
 		if !exist {
 			fmt.Println("Command not found:", cmd)
 			continue
 		}
 
 		if state {
-			//gpio.High()
+			gpio.High()
 		} else {
-			//gpio.Low()
+			gpio.Low()
 		}
 	}
 }
@@ -116,7 +119,7 @@ func processCommand(c Command) {
 	}
 
 	if len(validCommands) == 0 {
-		//resetPins()
+		resetPins()
 		return
 	}
 
