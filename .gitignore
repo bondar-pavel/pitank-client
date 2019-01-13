@@ -1,5 +1,6 @@
 # Ignore binary
 pitank_client
+pitank_client_arm
 vendor
 
 # Binaries for programs and plugins
