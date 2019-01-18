@@ -1,0 +1,8 @@
+[Unit]
+Description="PiTank Client service"
+
+[Service]
+ExecStart=/usr/bin/pitank-client-arm
+
+[Install]
+WantedBy=multi-user.target
