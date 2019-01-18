@@ -178,5 +178,8 @@ func main() {
 
 	initializePins()
 
-	openWebsocket(*server, *name)
+	// If websocket fails try to reopen it forever
+	for {
+		openWebsocket(*server, *name)
+	}
 }
