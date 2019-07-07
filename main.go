@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -143,12 +143,18 @@ func openWebsocket(host, name string) error {
 	defer c.Close()
 
 	for {
-		_, message, err := c.ReadMessage()
+		mt, message, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			fmt.Println("read:", err)
 			return err
 		}
 		fmt.Printf("Received: %s", message)
+		// Write message back to be able to measure round-trip delay
+		err = c.WriteMessage(mt, message)
+		if err != nil {
+			fmt.Println("write:", err)
+			return err
+		}
 
 		var cmd Command
 		err = json.Unmarshal(message, &cmd)
@@ -180,6 +186,8 @@ func main() {
 
 	// If websocket fails try to reopen it forever
 	for {
-		openWebsocket(*server, *name)
+		err := openWebsocket(*server, *name)
+		fmt.Println("Retrying to connect to Websocket:", err)
+		time.Sleep(5 * time.Second)
 	}
 }
