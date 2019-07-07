@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/webrtc"
 	"github.com/pkg/errors"
 	rpio "github.com/stianeikeland/go-rpio"
 )
@@ -37,6 +39,8 @@ var DisallowedCombinations = map[string]string{
 
 type Command struct {
 	Commands string `json:"commands"`
+	Offer    string `json:"offer,ommitempty"`
+	Answer   string `json:"answer,ommitempty"`
 }
 
 // initializePins sets GPIO pins as outputs with low state
@@ -91,7 +95,7 @@ func getStateMap(commands []string) map[string]bool {
 		// set command to stateMap and check for conflicting states
 		disallowed, exist := DisallowedCombinations[cmd]
 		if exist {
-			// if we tring to set disallowed state, cleanup both conflicting values
+			// if we trying to set disallowed state, cleanup both conflicting values
 			if stateMap[disallowed] {
 				fmt.Printf("%s and %s are conflicting commands, cleaning up both\n", cmd, disallowed)
 				stateMap[disallowed] = false
@@ -142,6 +146,24 @@ func openWebsocket(host, name string) error {
 	}
 	defer c.Close()
 
+	peerConnection, err := initPeerConnection()
+	if err != nil {
+		fmt.Println("Peer connection init failed:", err)
+	} else {
+		offer, err := generateOffer(peerConnection)
+
+		fmt.Println("Generated offer:", offer)
+		if err != nil {
+			fmt.Println("Offer generate failed:", err)
+		} else {
+			cmd := Command{Offer: offer}
+			err := c.WriteJSON(cmd)
+			if err != nil {
+				fmt.Println("Error on writing offer:", err)
+			}
+		}
+	}
+
 	for {
 		mt, message, err := c.ReadMessage()
 		if err != nil {
@@ -162,8 +184,129 @@ func openWebsocket(host, name string) error {
 			fmt.Println("Error on unmarshal:", err.Error())
 			continue
 		}
+
+		if cmd.Answer != "" && peerConnection != nil {
+			err := setWebRTCAnswer(peerConnection, cmd.Answer)
+			if err != nil {
+				fmt.Println("Error on receiving answer:", err)
+			}
+			continue
+		}
+
 		processCommand(cmd)
 	}
+}
+
+// initializes PeerConnection with handlers for OnOpen, OnMessage callbacks
+func initPeerConnection() (*webrtc.PeerConnection, error) {
+	// Prepare the configuration
+	config := webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs: []string{"stun:stun.l.google.com:19302"},
+			},
+		},
+	}
+
+	// Create a new RTCPeerConnection
+	peerConnection, err := webrtc.NewPeerConnection(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a datachannel with label 'data'
+	dataChannel, err := peerConnection.CreateDataChannel("commands", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the handler for ICE connection state
+	// This will notify you when the peer has connected/disconnected
+	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		fmt.Printf("ICE Connection State has changed: %s\n", connectionState.String())
+	})
+
+	// Register channel opening handling
+	dataChannel.OnOpen(func() {
+		fmt.Printf("Data channel '%s'-'%d' open. Random messages will now be sent to any connected DataChannels every 5 seconds\n", dataChannel.Label(), dataChannel.ID())
+		sendErr := dataChannel.SendText("Opened WebRTC connection")
+		if sendErr != nil {
+			fmt.Println("Can not send to channel:", sendErr)
+		}
+	})
+
+	// Register text message handling
+	dataChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
+		fmt.Printf("Message from DataChannel '%s': '%s'\n", dataChannel.Label(), string(msg.Data))
+
+		var cmd Command
+		err := json.Unmarshal(msg.Data, &cmd)
+		if err != nil {
+			fmt.Println("Error on unmarchal cmd:", string(msg.Data), err)
+			return
+		}
+		processCommand(cmd)
+	})
+
+	return peerConnection, nil
+}
+
+// generateOffer generates WebRTC offer for peerConnection and encodes it,
+// this offer should be passed to another WebRTC client to establish connection
+func generateOffer(peerConnection *webrtc.PeerConnection) (string, error) {
+	// Create an offer to send to the browser
+	offer, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Sets the LocalDescription, and starts our UDP listeners
+	err = peerConnection.SetLocalDescription(offer)
+	if err != nil {
+		return "", err
+	}
+
+	return Encode(offer)
+}
+
+func setWebRTCAnswer(peerConnection *webrtc.PeerConnection, encodedAnswer string) error {
+	// Wait for the answer to be pasted
+	answer := webrtc.SessionDescription{}
+	err := Decode(encodedAnswer, &answer)
+	if err != nil {
+		return err
+	}
+
+	// Apply the answer as the remote description
+	err = peerConnection.SetRemoteDescription(answer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Encode encodes the input in base64
+func Encode(obj interface{}) (string, error) {
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(b), nil
+}
+
+// Decode decodes the input from base64
+func Decode(in string, obj interface{}) error {
+	b, err := base64.StdEncoding.DecodeString(in)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
