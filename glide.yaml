@@ -1,8 +1,0 @@
-package: .
-import:
-- package: github.com/gorilla/websocket
-  version: ^1.4.0
-- package: github.com/pkg/errors
-  version: ^0.8.1
-- package: github.com/stianeikeland/go-rpio
-  version: ^4.4.0

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pion/webrtc"
+	"github.com/pion/webrtc/v2"
 	"github.com/pkg/errors"
 	rpio "github.com/stianeikeland/go-rpio"
 )
