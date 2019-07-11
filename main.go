@@ -41,6 +41,7 @@ type Command struct {
 	Commands string `json:"commands"`
 	Offer    string `json:"offer,ommitempty"`
 	Answer   string `json:"answer,ommitempty"`
+	Time     int64  `json:"time,omitempty"`
 }
 
 // initializePins sets GPIO pins as outputs with low state
@@ -231,6 +232,13 @@ func initPeerConnection() (*webrtc.PeerConnection, error) {
 				fmt.Println("Error on unmarchal cmd:", string(msg.Data), err)
 				return
 			}
+			// Write message back to be able to measure round-trip delay
+			err = dataChannel.SendText(string(msg.Data))
+			if err != nil {
+				fmt.Println("Error on writing back:", err)
+			}
+			fmt.Println("Writing back:", string(msg.Data))
+
 			processCommand(cmd)
 		})
 	})
