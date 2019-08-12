@@ -147,11 +147,6 @@ func openWebsocket(host, name string) error {
 	}
 	defer c.Close()
 
-	peerConnection, err := initPeerConnection()
-	if err != nil {
-		fmt.Println("Peer connection init failed:", err)
-	}
-
 	for {
 		mt, message, err := c.ReadMessage()
 		if err != nil {
@@ -173,7 +168,12 @@ func openWebsocket(host, name string) error {
 			continue
 		}
 
-		if cmd.Offer != "" && peerConnection != nil {
+		if cmd.Offer != "" {
+			peerConnection, err := initPeerConnection()
+			if err != nil {
+				fmt.Println("Peer connection init failed:", err)
+				continue
+			}
 			answer, err := setWebRTCOffer(peerConnection, cmd.Offer)
 			if err != nil {
 				fmt.Println("Error on receiving answer:", err)
