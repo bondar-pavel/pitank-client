@@ -12,7 +12,7 @@ func main() {
 
 	server := flag.String("server", "stream.pitank.com", "server host:port")
 	name := flag.String("name", "pitank", "pitank name to use on registration")
-	cameraID := flag.Int("camera", 0, "number of camera device to use")
+	//cameraID := flag.Int("camera", 0, "number of camera device to use")
 	flag.Parse()
 
 	/*
@@ -22,7 +22,7 @@ func main() {
 			fmt.Println("Received data:", len(data))
 		}
 	*/
-	fmt.Println("Camera to use:", *cameraID)
+	//fmt.Println("Camera to use:", *cameraID)
 
 	pitank, err := NewPiTank()
 	if err != nil {
