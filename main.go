@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	rpio "github.com/stianeikeland/go-rpio"
 )
 
 func main() {
@@ -26,20 +24,16 @@ func main() {
 	*/
 	fmt.Println("Camera to use:", *cameraID)
 
-	// Open and map memory to access gpio, check for errors
-	if err := rpio.Open(); err != nil {
+	pitank, err := NewPiTank()
+	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	// Unmap gpio memory when done
-	defer rpio.Close()
-
-	initializePins()
+	defer pitank.Close()
 
 	// If websocket fails try to reopen it forever
 	for {
-		err := openWebsocket(*server, *name)
+		err := openWebsocket(*server, *name, pitank)
 		fmt.Println("Retrying to connect to Websocket:", err)
 		time.Sleep(5 * time.Second)
 	}

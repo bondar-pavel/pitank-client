@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func openWebsocket(host, name string) error {
+func openWebsocket(host, name string, pitank CommandProcessor) error {
 	u := url.URL{Scheme: "ws", Host: host, Path: "/api/connect/" + name}
 	fmt.Printf("connecting to %s\n", u.String())
 
@@ -41,7 +41,7 @@ func openWebsocket(host, name string) error {
 		}
 
 		if cmd.Offer != "" {
-			peerConnection, err := initPeerConnection()
+			peerConnection, err := initPeerConnection(pitank)
 			if err != nil {
 				fmt.Println("Peer connection init failed:", err)
 				continue
@@ -57,6 +57,6 @@ func openWebsocket(host, name string) error {
 			continue
 		}
 
-		processCommand(cmd)
+		pitank.ProcessCommand(cmd)
 	}
 }

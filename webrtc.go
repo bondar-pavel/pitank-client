@@ -9,7 +9,7 @@ import (
 )
 
 // initializes PeerConnection with handlers for OnOpen, OnMessage callbacks
-func initPeerConnection() (*webrtc.PeerConnection, error) {
+func initPeerConnection(pitank CommandProcessor) (*webrtc.PeerConnection, error) {
 	// Prepare the configuration
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -58,7 +58,7 @@ func initPeerConnection() (*webrtc.PeerConnection, error) {
 			}
 			fmt.Println("Writing back:", string(msg.Data))
 
-			processCommand(cmd)
+			pitank.ProcessCommand(cmd)
 		})
 	})
 
