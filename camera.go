@@ -1,4 +1,4 @@
-// +build ignore
+// +build camera
 
 package main
 

@@ -1,5 +1,5 @@
 build:
-	go build -o pitank-client
+	go build -tags camera -o pitank-client
 
 build-arm:
 	GOOS=linux GOARCH=arm GOARM=5 go build -o pitank-client-arm
