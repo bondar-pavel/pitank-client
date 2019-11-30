@@ -9,7 +9,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func openWebsocket(host, name string, pitank CommandProcessor) error {
+const cameraMessageType = 1
+const cameraMessageStart = "start"
+
+func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) error {
 	u := url.URL{Scheme: "ws", Host: host, Path: "/api/connect/" + name}
 	fmt.Printf("connecting to %s\n", u.String())
 
@@ -55,6 +58,17 @@ func openWebsocket(host, name string, pitank CommandProcessor) error {
 			reply := Command{Answer: answer}
 			c.WriteJSON(reply)
 			continue
+		}
+
+		if cmd.Camera == cameraMessageStart {
+			camera.Start()
+			defer camera.Stop()
+
+			go func() {
+				for data := range camera.Stream {
+					c.WriteMessage(cameraMessageType, data)
+				}
+			}()
 		}
 
 		pitank.ProcessCommand(cmd)

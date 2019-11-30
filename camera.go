@@ -9,9 +9,10 @@ import (
 // Camera reads stream from webcam and publish each frame
 // to stream channel as []byte
 type Camera struct {
-	CameraID int
-	Stream   chan []byte
-	cancel   chan bool
+	CameraID  int
+	Stream    chan []byte
+	cancel    chan bool
+	isStarted bool
 }
 
 // NewCamera create new instance of Camera
@@ -23,9 +24,20 @@ func NewCamera(cameraID int) *Camera {
 	}
 }
 
-// Stop initiate stop of camera stream
-func (c Camera) Stop() {
-	c.cancel <- true
+// Start starts video stream if not started already
+func (c *Camera) Start() {
+	if !c.isStarted {
+		go c.Process()
+		c.isStarted = true
+	}
+}
+
+// Stop initiate stop of camera stream is stream was previously started
+func (c *Camera) Stop() {
+	if c.isStarted {
+		c.cancel <- true
+		c.isStarted = false
+	}
 }
 
 // Process opens webcam, read each frame and publish to stream channel
@@ -40,6 +52,7 @@ func (c Camera) Process() error {
 	for {
 		select {
 		case <-c.cancel:
+			close(c.Stream)
 			return nil
 		default:
 		}
