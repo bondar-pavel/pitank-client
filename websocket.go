@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const cameraMessageType = 1
 const cameraMessageStart = "start"
 
 func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) error {
@@ -66,7 +65,7 @@ func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) e
 
 			go func() {
 				for data := range camera.Stream {
-					c.WriteMessage(cameraMessageType, data)
+					c.WriteMessage(websocket.BinaryMessage, data)
 				}
 			}()
 		}
