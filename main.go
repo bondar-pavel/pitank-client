@@ -13,6 +13,7 @@ func main() {
 	server := flag.String("server", "stream.pitank.com", "server host:port")
 	name := flag.String("name", "pitank", "pitank name to use on registration")
 	cameraID := flag.Int("camera", 0, "number of camera device to use")
+	disableGPIO := flag.Bool("disable_gpio", false, "disables GPIO initialization")
 	flag.Parse()
 
 	camera := NewCamera(*cameraID)
@@ -24,16 +25,23 @@ func main() {
 	*/
 	//fmt.Println("Camera to use:", *cameraID)
 
-	pitank, err := NewPiTank()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	var commandProcessor CommandProcessor
+	if *disableGPIO {
+		commandProcessor = &FakePiTank{}
+	} else {
+		pitank, err := NewPiTank()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		defer pitank.Close()
+
+		commandProcessor = pitank
 	}
-	defer pitank.Close()
 
 	// If websocket fails try to reopen it forever
 	for {
-		err := openWebsocket(*server, *name, pitank, camera)
+		err := openWebsocket(*server, *name, commandProcessor, camera)
 		fmt.Println("Retrying to connect to Websocket:", err)
 		time.Sleep(5 * time.Second)
 	}

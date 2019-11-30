@@ -41,6 +41,12 @@ type CommandProcessor interface {
 	ProcessCommand(Command)
 }
 
+type FakePiTank struct{}
+
+func (FakePiTank) ProcessCommand(cmd Command) {
+	fmt.Println("Received command:", cmd.Commands)
+}
+
 type PiTank struct {
 	commandToGPIO          map[string]rpio.Pin
 	disallowedCombinations map[string]string
