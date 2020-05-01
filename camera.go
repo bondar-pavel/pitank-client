@@ -47,6 +47,7 @@ func (c *Camera) Stop() {
 func (c *Camera) Process() error {
 	fmt.Println("Opening camera device:", c.CameraID)
 	webcam, err := gocv.OpenVideoCapture(c.CameraID)
+	//webcam, err := gocv.VideoCaptureDevice(c.CameraID)
 	if err != nil {
 		return err
 	}
