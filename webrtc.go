@@ -9,7 +9,7 @@ import (
 )
 
 // initializes PeerConnection with handlers for OnOpen, OnMessage callbacks
-func initPeerConnection(pitank CommandProcessor) (*webrtc.PeerConnection, error) {
+func initPeerConnection(pitank CommandProcessor, camera *Camera) (*webrtc.PeerConnection, error) {
 	// Prepare the configuration
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -57,6 +57,18 @@ func initPeerConnection(pitank CommandProcessor) (*webrtc.PeerConnection, error)
 				fmt.Println("Error on writing back:", err)
 			}
 			fmt.Println("Writing back:", string(msg.Data))
+
+			// Start camera listener if request received via webrtc
+			if cmd.Commands == cameraMessageStart {
+				camera.Start()
+				defer camera.Stop()
+
+				go func() {
+					for data := range camera.Stream {
+						dataChannel.Send(data)
+					}
+				}()
+			}
 
 			pitank.ProcessCommand(cmd)
 		})

@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const cameraMessageStart = "start"
+const cameraMessageStart = "camera_start"
 
 func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) error {
 	u := url.URL{Scheme: "ws", Host: host, Path: "/api/connect/" + name}
@@ -43,7 +43,7 @@ func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) e
 		}
 
 		if cmd.Offer != "" {
-			peerConnection, err := initPeerConnection(pitank)
+			peerConnection, err := initPeerConnection(pitank, camera)
 			if err != nil {
 				fmt.Println("Peer connection init failed:", err)
 				continue
@@ -59,7 +59,8 @@ func openWebsocket(host, name string, pitank CommandProcessor, camera *Camera) e
 			continue
 		}
 
-		if cmd.Camera == cameraMessageStart {
+		// Start camera listener if request received via websocket
+		if cmd.Commands == cameraMessageStart {
 			camera.Start()
 			defer camera.Stop()
 

@@ -3,6 +3,8 @@
 package main
 
 import (
+	"fmt"
+
 	"gocv.io/x/gocv"
 )
 
@@ -26,6 +28,7 @@ func NewCamera(cameraID int) *Camera {
 
 // Start starts video stream if not started already
 func (c *Camera) Start() {
+	fmt.Println("Starting camera")
 	if !c.isStarted {
 		go c.Process()
 		c.isStarted = true
@@ -41,7 +44,8 @@ func (c *Camera) Stop() {
 }
 
 // Process opens webcam, read each frame and publish to stream channel
-func (c Camera) Process() error {
+func (c *Camera) Process() error {
+	fmt.Println("Opening camera device:", c.CameraID)
 	webcam, err := gocv.OpenVideoCapture(c.CameraID)
 	if err != nil {
 		return err
@@ -53,13 +57,18 @@ func (c Camera) Process() error {
 		select {
 		case <-c.cancel:
 			close(c.Stream)
+			// recreate stream in case we want to start it again
+			c.Stream = make(chan []byte, 1)
 			return nil
 		default:
 		}
+
+		fmt.Println("Getting new frame")
 		if ok := webcam.Read(&img); !ok {
 			continue
 		}
 
+		fmt.Println("Encoding frame to jpg")
 		buf, err := gocv.IMEncode(".jpg", img)
 		if err != nil {
 			continue
